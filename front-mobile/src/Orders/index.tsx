@@ -1,18 +1,80 @@
-import React from 'react';
-import { StyleSheet, Text, View  } from 'react-native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, ScrollView, Alert, Text, View } from 'react-native';
+import { TouchableWithoutFeedback } from 'react-native-gesture-handler';
+import { fetchOrders } from '../api';
 import Header from '../Header';
+import OrderCard from '../OrderCard';
+import { Order } from '../types';
 
 function Orders() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigation = useNavigation();
+  const isFocused = useIsFocused();
+
+  const fetchData = () => {
+    setIsLoading(true);
+    fetchOrders()
+      .then(response => setOrders(response.data))
+      .catch(() => Alert.alert("Erro ao buscar pedidos!"))
+      .finally(() => setIsLoading(false));
+  }
+
+  useEffect(() => {
+    if (isFocused) {
+      fetchData();
+    }
+  }, [isFocused]);
+
+  const handleOnPress = (order: Order) => {
+    navigation.navigate('OrderDetails', {
+      order
+    });
+  }
+
   return (
     <>
       <Header />
-      <View >
-        <Text>Listagem de pedidos</Text>
-      </View>
+      <ScrollView style={styles.container}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>
+              Buscando pedidos...
+            </Text>
+          </View>
+        ) : (
+            orders.map(order => (
+              <TouchableWithoutFeedback 
+                key={order.id}
+                onPress={() => handleOnPress(order)}
+              >
+                <OrderCard order={order} />
+              </TouchableWithoutFeedback>
+            ))
+          )}
+      </ScrollView>
     </>
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  container: {
+    paddingRight: '5%',
+    paddingLeft: '5%'
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    lineHeight: 25,
+    letterSpacing: -0.24,
+    color: '#DA5C5C'
+  }
+});
 
 export default Orders;
